@@ -1,0 +1,32 @@
+{
+    "user1": {
+        "name" : "Micheal Scott",
+        "nickname" : "Prison Mike",
+        "password" : "Mi12345",
+        "id" : 1
+    },
+    "user2": {
+        "name" : "Dwight Schrute",
+        "nickname" : "Dwight",
+        "password" : "Dw12345",
+        "id" : 2
+    },
+    "user3": {
+        "name" : "Jim Halpert",
+        "nickname" : "Jimothy",
+        "password" : "Ji12345",
+        "id" : 3
+    },
+    "user4": {
+        "name" : "Pam Beesly",
+        "nickname" : "Pamela",
+        "password" : "Pa12345",
+        "id" : 4
+    },
+    "user5": {
+        "name" : "Stanely Hudson",
+        "nickname" : "Stanely the manley",
+        "password" : "St12345",
+        "id" : 5
+    }
+}
