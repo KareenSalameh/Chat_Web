@@ -20,8 +20,6 @@
 
     <div class="container-fluid">
         <div class="row">
-            <!-- <div class="col-2"></div> -->
-
 
             <!-- left side -->
             <div class="left">
@@ -32,7 +30,7 @@
                                 <div class="userimg">
                                     <img src="static/images/icon.png" class="im">
                                 </div>
-                                <span class="w-100 m-1 ms-4">Nickname: </span>
+                                <span id="userName" class="w-100 m-1 ms-4">Name</span>
                                 <div id="liveAlertPlaceholder"></div>
                                 <button class="btn btn-outline-info" type="button" id="liveAlertBtn"
                                     data-bs-toggle="modal" data-bs-target="#modalSubscriptionForm">
@@ -45,7 +43,8 @@
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <div class="modal-header text-center" id="addContactTop">
-                                                <h4 class="modal-title w-100 font-weight-bold">Add new Contact</h4>
+                                                <h4 class="modal-title w-100 font-weight-bold text-dark">Add new Contact
+                                                </h4>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                     aria-label="Close"></button>
                                             </div>
@@ -54,7 +53,8 @@
                                                     <i class="fas fa-user prefix grey-text"></i>
                                                     <form class="form-floating">
                                                         <input class="form-control" id="floatingInputValue">
-                                                        <label for="floatingInputValue">Contact's identifier</label>
+                                                        <label for="floatingInputValue text-secondary"
+                                                            id="contact">Contact's identifier</label>
                                                     </form>
                                                 </div>
                                             </div>
@@ -100,8 +100,8 @@
                                 <form class="form-floating">
                                     <div class="input-group">
                                         <input type="file" class="form-control" id="inputGroupFile04"
-                                            aria-describedby="inputGroupFileAddon04" aria-label="Upload" accept="image/png image/jpg image/jpeg">
-                                            <!-- accept="image/png image/jpg" -->
+                                            aria-describedby="inputGroupFileAddon04" aria-label="Upload"
+                                            accept="image/png image/jpg image/jpeg">
                                         <button class="btn btn-outline-secondary" type="button" onclick="sendImage()"
                                             id="inputGroupFileAddon04"><i class="bi bi-file-arrow-up"></i></button>
                                     </div>
@@ -129,7 +129,7 @@
                                         <input type="file" class="form-control" id="inputGroupFile05"
                                             aria-describedby="inputGroupFileAddon04" aria-label="Upload">
                                         <button class="btn btn-outline-secondary" type="button" onclick="sendVideo()"
-                                            id="inputGroupFileAddon04"><i class="bi bi-file-arrow-up"></i></button>
+                                            id="inputGroupFileAddon05"><i class="bi bi-file-arrow-up"></i></button>
                                     </div>
                                 </form>
                             </div>
@@ -151,9 +151,11 @@
                             <div class="md-form mb-5">
                                 <i class="fas fa-user prefix grey-text"></i>
                                 <div class="mid" id="mid">
-                                    <audio id="player" controls></audio>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="record()"
-                                        id="inputGroupFileAddon04"><i class="bi bi-mic" id="rec"></i></button>
+                                    <button name="record" class="btn btn-outline-secondary" id="startRecording"><i
+                                            class="bi bi-mic"></i></button>
+                                    <button name="stop" class="btn btn-outline-secondary disabled" id="stopRecording"><i
+                                            class="bi bi-mic"><i class="bi bi-stop-fill"></i></i></button>
+                                    <span id="sendingRec"></span>
                                 </div>
                             </div>
                         </div>
@@ -175,17 +177,14 @@
                         let src = reader.result;
                         let end = '" class="sentImage new"><br><span>' + time() + '</span>';
 
-                        reader.addEventListener("load", function() {
+                        reader.addEventListener("load", function () {
                             src = this.result;
-                            console.log(this);
-                            console.log(src);
+                            currentUser.lastMessage = "image";
                             sendNewMessage(currentUser, start + src + end, chatbox);
                         });
 
                         reader.readAsDataURL(file);
-                        currentUser.lastMessage = "image";
-                        let lastMessage = document.getElementById('lastMessage');
-                        updateLastMessage(currentUser, lastMessage);
+
                     }
                     input.value = '';
                 }
@@ -199,17 +198,14 @@
                     if (file) {
                         const reader = new FileReader();
 
-                        '<video width="220" height="140" controls><source src="static/videos/prada.mp4" type="video/mp4">"</video>'
                         let start = '<video width="220" height="140" controls><source src="';
                         let src = reader.result;
                         let end = '" type="video/mp4">"</video><br><span>' + time() + '</span>';
 
-                        reader.addEventListener("load", function() {
+                        reader.addEventListener("load", function () {
                             src = this.result;
-                            sendNewMessage(currentUser, start + src + end, chatbox);
                             currentUser.lastMessage = "video";
-                            let lastMessage = document.getElementById('lastMessage');
-                        updateLastMessage(currentUser, lastMessage);
+                            sendNewMessage(currentUser, start + src + end, chatbox);
                         });
 
                         reader.readAsDataURL(file);
@@ -217,51 +213,93 @@
                     input.value = '';
                 }
 
-                function record() {
-                    let div = document.getElementById('mid');
-                    let rec = document.getElementById('rec');
-                    rec.innerHTML = '<i class="bi bi-stop-fill"></i>';
+                var btnStartRec = document.querySelector('button[name="record"');
+                var btnStopRec = document.querySelector('button[name="stop"');
+                var audioSrc;
 
-                    rec.onclick = function () {
-                        div.innerHTML = '';
+                btnStartRec.addEventListener('click', async () => {
+                    let start = document.getElementById('startRecording');
+                    start.className = "btn btn-outline-secondary disabled";
+                    let stop = document.getElementById('stopRecording');
+                    stop.className = "btn btn-outline-secondary";
+                    $('#modalUploadRecording').modal("show");
 
-                        let stop = document.createElement('button');
-                        stop.className = "btn btn-outline-secondary disabled"; // notice that this button is disabled when pressed!
-                        let i1 = document.createElement('i');
-                        i1.className = "bi bi-mic";
+                    // the stream's input
+                    let mediaObj = {
+                        audio: true,
+                        video: false
+                    };
 
-                        stop.appendChild(i1);
-                        div.appendChild(stop);
+                    let stream = await navigator.mediaDevices.getUserMedia(mediaObj);
+                    let mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
 
+                    let chunks = [];
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        chunks.push(e.data);
+                    }
+
+                    mediaRecorder.onerror = (e) => {
+                        alert(e.error);
+                    }
+
+                    mediaRecorder.onstop = (e) => {
+                        let blob = new Blob(chunks, { 'type': 'audio/mp3;' });
+                        chunks = [];
+                        audioSrc = window.URL.createObjectURL(blob);
+                    }
+
+                    btnStopRec.addEventListener('click', () => {
+                        mediaRecorder.stop();
+                        let stop = document.getElementById('stopRecording');
+                        stop.className = "btn btn-outline-secondary disabled";
+
+                        let mid = document.getElementById('mid');
+                        let span = document.getElementById('sendingRec');
                         let send = document.createElement('button');
                         send.className = "btn btn-outline-secondary";
                         send.onclick = function () {
-                            div.innerHTML = '<button class="btn btn-outline-secondary" type="button" onclick="record()" id="inputGroupFileAddon04"><i class="bi bi-mic" id="rec"></i></button>';
                             $('#modalUploadRecording').modal("toggle");
+                            let chatbox = document.getElementById('chatbox');
+                            let sp = document.createElement('span');
 
-                            currentUser.lastMessage = "recording";
-                            let lastMessage = document.getElementById('lastMessage');
-                            updateLastMessage(currentUser, lastMessage);
+                            let s = '<audio controls autoplay><source src="';
+                            let src = audioSrc;
+                            let e = '" type="audio/mpeg"></audio>';
+                            let text = s + src + e;
+                            
+                            let play = document.createElement('button');
+                            play.className = "btn btn-outline-secondary";
+                            play.innerHTML = '<i class="bi bi-file-play"></i>';
+                            let id = currentUser.id + "" + currentUser.audioIndex;
+                            play.id = "newPlay" + id;
+                            currentUser.audioIndex++;
+
+                            $(document).ready(function() {
+                                $('#' + "newPlay" + id).click(function() {
+                                    $(this).replaceWith(text);
+                                });
+                            });
+                            
+                            sp.appendChild(play);
+                            currentUser.lastMessage = "audio";
+                            sendNewMessage(currentUser, sp.innerHTML + '<br><span>' + time() + '</span>', chatbox);
+
+                            // initializing again
+                            span.innerHTML = '';
+                            let start = document.getElementById('startRecording');
+                            start.className = "btn btn-outline-secondary";
                         }
-                        let i2 = document.createElement('i');
-                        i2.className = "bi bi-file-arrow-up";
 
-                        send.appendChild(i2);
-                        div.appendChild(send);
+                        let i = document.createElement('i');
+                        i.className = "bi bi-file-arrow-up";
 
-                        const player = document.getElementById('player');
-
-                        const handle = function(stream) {
-                            if (window.URL) {
-                                player.srcObject = stream;
-                            } else {
-                                player.src = stream;
-                            }
-                        };
-
-                        navigator.mediaDevices.getUserMedia({audio: true, video: false}).then(handle);
-                    }
-                }
+                        send.appendChild(i);
+                        span.appendChild(send);
+                        mid.appendChild(span);
+                    });
+                });
             </script>
         </div>
     </div>
@@ -272,21 +310,49 @@
         crossorigin="anonymous"></script>
 
     <script>
-        // <iframe src="https://vlipsy.com/embed/Exvh5Q23" class="sentVideo" frameborder="0"></iframe>
         const messages = [
-            { rec1: "The worst thing about prison was the Dementors.<br><span>12:18</span>", sent: "I understand nothing<br><span>14:00</span>", rec2: '<img src="static/images/britney.png" class="sentImage"><br><span>16:01</span>', rec3: '<video width="220" height="140" controls><source src="static/videos/firstaid.mp4" type="video/mp4">"</video><br><span>17:15</span>', rec4: "Toby is in HR, which technically means he works for corporate. So he’s really not a part of our family. Also, he’s divorced, so he’s really not a part of his family.<br><span>17:25</span>" },
-            { rec1: "I am faster than 80% of all snakes<br><span>08:00</span>", sent: "I don't believe you, continue.<br><span>08:01</span>", rec2: "Dwight, at 8am today, someone poisons the coffee. Do not drink the coffee. More instructions will follow.<br> Cordially,<br> Future Dwight.<br><span>08:02</span>", rec3: '<img src="static/images/detector.png" class="sentImage"><br><span>09:55</span>', rec4: '<video width="220" height="140" controls><source src="static/videos/bear.mp4" type="video/mp4">"</video><br><span>17:15</span>' },
-            { rec1: "I had to put more and more nickels in his handset, so he would get used to the weight. Then one day… I took ‘em all out.<br><span>10:55</span>", sent: "From time to time I send Dwight faxes. From himself. From the future<br><span>16:24</span>", rec2: '<img src="static/images/delusion2.png" class="sentImage"><br><span>17:20</span>', rec3: '<video width="220" height="140" controls><source src="static/videos/bl.mp4" type="video/mp4">"</video><br><span>17:29</span>', rec4: "hello<br><span>17:30</span>" },
-            { rec1: "There’s nothing better than a beautiful day at the beach, filled with sun, surf, and… uh, diligent note-taking<br><span>09:08</span>", sent: "I suggested we flip a coin, but Angela said she doesn't like to gamble.<br><span>12:20</span>", rec2: '<img src="static/images/same.png" class="sentImage"><br><span>13:14</span>', rec3: '<video width="220" height="140" controls><source src="static/videos/prada.mp4" type="video/mp4">"</video><br><span>09:00</span>', rec4: "hi<br><span>10:01</span>" },
-            // { rec1: "There’s nothing better than a beautiful day at the beach, filled with sun, surf, and… uh, diligent note-taking<br><span>09:08</span>", sent: "", rec2: '<img src="static/images/same.png" class="sentImage"><br><span>13:14</span>', rec3: '<video preload="none" playsinline aria-label="Embedded video" disablepictureinpicture poster="https://pbs.twimg.com/ext_tw_video_thumb/580163587965997056/pu/img/bAJAoDEMmPjc5766.jpg" class="sentVideo"></video><br><span>14:30</span>' },
-            { rec1: "Boy, Have You Lost Your Mind, Cause I'll Help You Find It!<br><span>12:47</span>", sent: "I got them a toaster. I tried to return the toaster, but the store said they no longer sold that kind of toaster, so my house now has two toasters.<br><span>15:02</span>", rec2: "hi<br><span>15:03</span>", rec3: '<img src="static/images/crossword2.png" class="sentImage"><br><span>16:22</span>', rec4: '<video width="220" height="140" controls><source src="static/videos/chair.mp4" type="video/mp4">"</video><br><span>16:00</span>' }
+            { rec1: "The worst thing about prison was the Dementors.<br><span>12:18</span>",
+            sent: "I understand nothing<br><span>14:00</span>",
+            rec2: '<img src="static/images/britney.png" class="sentImage"><br><span>16:01</span>',
+            rec3: '<video width="220" height="140" controls><source src="static/videos/firstaid.mp4" type="video/mp4">"</video><br><span>17:15</span>',
+            rec4: "Toby is in HR, which technically means he works for corporate. So he’s really not a part of our family. Also, he’s divorced, so he’s really not a part of his family.<br><span>17:25</span>",
+            rec5: '<audio controls autoplay><source src="static/audio/rabies.mp3" type="audio/mpeg"><br><span>17:25</span>'
+            },
+            { rec1: "I am faster than 80% of all snakes<br><span>08:00</span>",
+            sent: "I don't believe you, continue.<br><span>08:01</span>",
+            rec2: "Dwight, at 8am today, someone poisons the coffee. Do not drink the coffee. More instructions will follow.<br> Cordially,<br> Future Dwight.<br><span>08:02</span>",
+            rec3: '<img src="static/images/detector.png" class="sentImage"><br><span>09:55</span>',
+            rec4: '<video width="220" height="140" controls><source src="static/videos/bear.mp4" type="video/mp4">"</video><br><span>17:15</span>',
+            rec5: '<audio controls autoplay><source src="static/audio/do.mp3" type="audio/mpeg"><br><span>17:20</span>'
+            },
+            { rec1: "I had to put more and more nickels in his handset, so he would get used to the weight. Then one day… I took ‘em all out.<br><span>10:55</span>",
+            sent: "From time to time I send Dwight faxes. From himself. From the future<br><span>16:24</span>",
+            rec2: '<img src="static/images/delusion2.png" class="sentImage"><br><span>16:30</span>',
+            rec3: '<video width="220" height="140" controls><source src="static/videos/bl.mp4" type="video/mp4">"</video><br><span>17:00</span>',
+            rec4: '<img src="static/images/birthday.png" class="sentImage"><br><span>17:20</span>',
+            rec5: '<audio controls autoplay><source src="static/audio/tried.mp3" type="audio/mpeg"><br><span>17:28</span>'
+            },
+            { rec1: "There’s nothing better than a beautiful day at the beach, filled with sun, surf, and… uh, diligent note-taking<br><span>09:08</span>",
+            sent: "I suggested we flip a coin, but Angela said she doesn't like to gamble.<br><span>12:20</span>",
+            rec2: '<img src="static/images/same.png" class="sentImage"><br><span>13:14</span>',
+            rec3: '<video width="220" height="140" controls><source src="static/videos/prada.mp4" type="video/mp4">"</video><br><span>09:00</span>',
+            rec4: "hi<br><span>10:01</span>",
+            rec5: '<audio controls autoplay><source src="static/audio/run.mp3" type="audio/mpeg"><br><span>10:30</span>'
+            },
+            { rec1: "Boy, Have You Lost Your Mind, Cause I'll Help You Find It!<br><span>12:47</span>",
+            sent: "I got them a toaster. I tried to return the toaster, but the store said they no longer sold that kind of toaster, so my house now has two toasters.<br><span>15:02</span>",
+            rec2: "hi<br><span>15:03</span>",
+            rec3: '<img src="static/images/crossword2.png" class="sentImage"><br><span>16:22</span>',
+            rec4: '<video width="220" height="140" controls><source src="static/videos/chair.mp4" type="video/mp4">"</video><br><span>16:00</span>',
+            rec5: '<audio controls autoplay><source src="static/audio/hi.mp3" type="audio/mpeg"><br><span>16:02</span>'
+            }
         ]
         const users = [
-            { name: "Micheal Scott", nickname: "Prison Mike", img: "/static/images/prisonmike.png", password: "12345", id: 1, chat: messages[0], newMessages: {}, lastMessage: "text" },
-            { name: "Dwight Schrute", nickname: "Dwight", img: "/static/images/dd.png", password: "12345", id: 2, chat: messages[1], newMessages: {}, lastMessage: "video" },
-            { name: "Jim Halpert", nickname: "Jimothy", img: "/static/images/jim.png", password: "12345", id: 3, chat: messages[2], newMessages: {}, lastMessage: "text" },
-            { name: "Pam Beesly", nickname: "Pamela", img: "/static/images/pam.png", password: "12345", id: 4, chat: messages[3], newMessages: {}, lastMessage: "text" },
-            { name: "Stanely Hudson", nickname: "Stanely the manley", img: "/static/images/stanley.png", password: "12345", id: 5, chat: messages[4], newMessages: {}, lastMessage: "video" },
+            { name: "Micheal Scott", nickname: "Prison Mike", img: "/static/images/prisonmike.png", password: "12345", id: 1, chat: messages[0], newMessages: {}, audioIndex: 0, lastMessage: "audio", lastMessageTime: "17:25" },
+            { name: "Dwight Schrute", nickname: "Dwight", img: "/static/images/dd.png", password: "12345", id: 2, chat: messages[1], newMessages: {}, audioIndex: 0, lastMessage: "audio", lastMessageTime: "17:20" },
+            { name: "Jim Halpert", nickname: "Jimothy", img: "/static/images/jim.png", password: "12345", id: 3, chat: messages[2], newMessages: {}, audioIndex: 0, lastMessage: "audio", lastMessageTime: "17:28" },
+            { name: "Pam Beesly", nickname: "Pamela", img: "/static/images/pam.png", password: "12345", id: 4, chat: messages[3], newMessages: {}, audioIndex: 0, lastMessage: "audio", lastMessageTime: "10:30" },
+            { name: "Stanely Hudson", nickname: "Stanely the manley", img: "/static/images/stanley.png", password: "12345", id: 5, chat: messages[4], newMessages: {}, audioIndex: 0, lastMessage: "audio", lastMessageTime: "16:02" },
         ]
 
         users.forEach(user => addRecipient(user));

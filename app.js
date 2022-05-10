@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const path = require('path');
 const fs = require('fs');
-const port = 12327;
+const port = 12329;
 var database;
 
 app.use("/static", express.static('./static/'));
@@ -11,16 +11,19 @@ app.set('view engine', 'ejs');
 const usrs = []
 fs.readFile(__dirname + "/" + "users.json", 'utf8', function (err, data) {
     database = JSON.parse(data);
-    // console.log(database);
 })
 
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'static/login.html'));
+});
+
+app.get('/index', (req, res) => {
     res.sendFile(path.join(__dirname, 'static/index.html'));
 });
 
 
 app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'static/Login.html'));
+    res.sendFile(path.join(__dirname, 'static/login.html'));
 });
 
 app.get('/sign', (req, res) => {

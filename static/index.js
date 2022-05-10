@@ -2,7 +2,7 @@ var numberOfUsers = 5;
 var newUsers = [];
 var currentUser;
 
-const exists = function (user, users) {
+const exists = function(user, users) {
     return users.some(u => u.name === user);
 }
 
@@ -26,18 +26,33 @@ const checkRecipient = function(user, users) {
 }
 
 const updateLastMessage = function(user, lastMessage) {
-    lastMessage.innerHTML = '<br>';
+    lastMessage.innerHTML = '';
+    let message;
 
     if (user.lastMessage === "text") {
-        lastMessage.innerHTML += user.chat.rec4.slice(0, 20);
+        if (!$.isEmptyObject(user.newMessages)) {
+            let elm;
+            for (elm in user.newMessages);
+            message = user.newMessages[elm];
+        } else {
+            message = user.chat.rec4;
+        }
+
+        lastMessage.innerHTML += message.slice(0, 15);
         lastMessage.innerHTML = lastMessage.innerHTML.replace("<br><span>","");
         lastMessage.innerHTML = lastMessage.innerHTML.replace("</span>", "");
         lastMessage.innerHTML = lastMessage.innerHTML.replace(new RegExp("[0-9]", "g"), "");
         lastMessage.innerHTML = lastMessage.innerHTML.replace(":", "");
-        lastMessage.innerHTML += "...";
+        lastMessage.innerHTML = lastMessage.innerHTML.replace("name<...", "name...");
     } else {
         lastMessage.innerHTML += user.lastMessage;
-    }
+    } 
+}
+
+const updateLastMessageTime = function(user, cite) {
+    var date = 24*60*60*1000;
+    user.lastMessageTime = time();
+    cite.innerHTML = user.lastMessageTime;
 }
 
 const uploadImage = function() {
@@ -68,8 +83,6 @@ const buttons = function() {
     let image = document.createElement('button');
     image.className = "btn btn-info";
     image.onclick = uploadImage;
-    // image.formTarget = "#modalSubscriptionForm";
-    // image.id = "img";
     let i1 = document.createElement('i');
     i1.className = "bi bi-file-image";
 
@@ -80,7 +93,6 @@ const buttons = function() {
     let video = document.createElement('button');
     video.className = "btn btn-info";
     video.onclick = uploadVideo;
-    // video.id = "vid";
     let i2 = document.createElement('i');
     i2.className = "bi bi-file-play";
 
@@ -91,10 +103,8 @@ const buttons = function() {
     let recorder = document.createElement('button');
     recorder.className = "btn btn-info";
     recorder.onclick = uploadRecording;
-    // recorder.id = "rec";
     let i3 = document.createElement('i');
     i3.className = "bi bi-file-music";
-    // i3.className = "bi bi-mic";
 
     recorder.appendChild(i3);
     group.appendChild(recorder);
@@ -116,13 +126,12 @@ const buttons = function() {
     }
 
     group.append(close);
-
     toolbar.appendChild(group);
     div.appendChild(toolbar);
 }
 
 // return 1 if the message is not empty
-const sendMessage = function(message, chatbox, bool = true) {
+const sendMessage = function(message, chatbox, bool = true, audio = null) {
     if (message != "") {
         let m = document.createElement('div');
 
@@ -133,7 +142,19 @@ const sendMessage = function(message, chatbox, bool = true) {
         }
         
         let p = document.createElement('p');
-        p.innerHTML = message;
+
+        if (audio === "audio") {
+            p.innerHTML = '<button class="btn btn-outline-secondary" id="play' + currentUser.id + '"><i class="bi bi-file-play"></i></button><br><span>' + currentUser.lastMessageTime + '</span>';
+            $(document).ready(function() {
+                $('#' + "play" + currentUser.id).click(function() {
+                    $(this).replaceWith(message);
+                });
+            });
+        } else {
+            p.innerHTML = message;
+        }
+
+        
         m.appendChild(p);
         chatbox.appendChild(m);
 
@@ -152,15 +173,21 @@ const sendNewMessage = function(user, message, chatbox) {
     let sent = sendMessage(message, chatbox);
     if (sent) {
         user.newMessages['' + i] = message;
-        currentUser.lastMessage = "text";
+        let lastMessage = document.getElementById("lastMessage" + user.name);
+        updateLastMessage(currentUser, lastMessage);
+
+        let cite = document.getElementById("cite" + currentUser.name);
+        updateLastMessageTime(currentUser, cite);
     }
 }
 
 const displayInnerChat = function(user) {
     let chat = document.getElementById('chat');
+
     let div = document.createElement('div');
     div.className = "chat-messages p-4";
     div.id = "inner";
+
     let chatbox = document.createElement('div');
     chatbox.className = "chatbox card-text";
     chatbox.id = "chatbox";
@@ -170,12 +197,14 @@ const displayInnerChat = function(user) {
     sendMessage(user.chat.rec2, chatbox);
     sendMessage(user.chat.rec3, chatbox);
     sendMessage(user.chat.rec4, chatbox);
+    sendMessage(user.chat.rec5, chatbox, true, "audio");
 
     if (!$.isEmptyObject(user.newMessages)) {
         for (let num of Object.keys(user.newMessages)) {
             sendMessage(user.newMessages[num], chatbox);
         }
     }
+
     div.appendChild(chatbox);
     chat.appendChild(div);
 }
@@ -227,10 +256,10 @@ const displayChat = function(user) {
     send.onclick = function() {
         if (input.value != "") {
             let chat = document.getElementById('chatbox');
+            currentUser.lastMessage = "text";
             sendNewMessage(user, input.value + '<br><span>' + time() + '</span>', chat);
             input.value = '';
         }
-        
     }
 
     button.appendChild(i1);
@@ -252,7 +281,16 @@ const addRecipient = function(user) {
         if (exists(user, newUsers)) {
             return;
         }
-        user = { name: user, nickname: user, img: "/static/images/icon.png", password: "12345", id: ++numberOfUsers, chat: {rec1: "", sent: "", rec2: "", rec3: "", rec4: ""}, newMessages: {}, lastMessage: "" }
+        user = { name: user,
+            nickname: user,
+            img: "/static/images/icon.png",
+            password: "12345",
+            id: ++numberOfUsers,
+            chat: {rec1: "", sent: "", rec2: "", rec3: "", rec4: "", rec5: ""},
+            newMessages: {},
+            audioIndex: 0,
+            lastMessage: "",
+            lastMessageTime: time() }
         newUsers.push(user);
         
     }
@@ -272,16 +310,16 @@ const addRecipient = function(user) {
     let span = document.createElement('span');
     span.innerHTML = user.nickname;
 
-    let lastMessage = document.createElement('span');
-    lastMessage.class = "d-flex align-items-bottom fw-lighter";
-    lastMessage.id = "lastMessage";
+    let lastMessage = document.createElement('div');
+    lastMessage.id = "lastMessage" + user.name;
     updateLastMessage(user, lastMessage);
     
 
     let cite = document.createElement('cite');
-    cite.className = "w-100 ms-5";
+    cite.className = "ms-5";
     cite.title = "Source Title";
-    cite.innerHTML = "1 minute ago"; // need to be changed whenever a new recipient is being added!
+    cite.id = "cite" + user.name;
+    cite.innerHTML = user.lastMessageTime;
 
     li.appendChild(img);
     span.appendChild(lastMessage);
