@@ -48,7 +48,7 @@ Sign up Page: http://localhost:12329/sign
 
 Web Chat Page : http://localhost:12329/
 
-***Screenshot for the WebChat Page includes some examples
+**Screenshot for the WebChat Page includes some examples**
 ![image](https://user-images.githubusercontent.com/73133299/168869545-6ede81a1-7af4-4bbc-bd14-9b383cdedc6a.png)
 
 
