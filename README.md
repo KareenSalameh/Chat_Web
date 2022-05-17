@@ -1,4 +1,4 @@
-**Web Chat App - Client Side
+***Web Chat App - Client Side***
 
 1) Installation:
 Please make sure you have installed node+npm and all relevant packages.
